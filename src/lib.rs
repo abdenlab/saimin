@@ -13,6 +13,7 @@ use arrow::record_batch::RecordBatch;
 
 use noodles::bam;
 use noodles::bgzf;
+use noodles::core::{Position, Region};
 use noodles::sam;
 
 #[pyclass]
@@ -32,10 +33,14 @@ impl BamReader {
         Self { reader, header }
     }
 
-    pub fn fetch(&mut self, chrom: &str, start: u32, end: u32) -> PyObject {
-        let region = format!("{}:{}-{}", chrom, start, end).parse().unwrap();
-        let query = self.reader.query(&self.header, &region).unwrap();
-        let ipc = write_ipc(query);
+    pub fn fetch(&mut self, chrom: &str, start: usize, end: usize) -> PyObject {
+        let start = Position::try_from(start).unwrap();
+        let end = Position::try_from(end).unwrap();
+        let query = self
+            .reader
+            .query(&self.header, &Region::new(chrom, start..=end))
+            .unwrap();
+        let ipc = write_ipc(query, &self.header);
         Python::with_gil(|py| PyBytes::new(py, &ipc).into())
     }
 
@@ -47,7 +52,7 @@ impl BamReader {
     pub fn __exit__(&mut self, _exc_type: PyObject, _exc_value: PyObject, _traceback: PyObject) {}
 }
 
-fn write_ipc(query: bam::reader::Query<std::fs::File>) -> Vec<u8> {
+fn write_ipc(query: bam::reader::Query<std::fs::File>, header: &sam::Header) -> Vec<u8> {
     let mut refs = StringDictionaryBuilder::<Int8Type>::new();
 
     let size = 100; // TODO: get size from region_viewer?
@@ -62,8 +67,12 @@ fn write_ipc(query: bam::reader::Query<std::fs::File>) -> Vec<u8> {
     // Map row-wise entries to column-wise arrays
     for result in query {
         let record = result.unwrap();
-        // TODO: map reference id to name
-        refs.append("chr1").unwrap();
+        let ref_name = match record.reference_sequence(&header) {
+            Some(Ok((name, _))) => name,
+            None => "unknown",
+            _ => panic!("error getting reference sequence"),
+        };
+        refs.append(ref_name).unwrap();
         starts.append_value(record.alignment_start().unwrap().get() as i32);
         ends.append_value(record.alignment_end().unwrap().get() as i32);
         names.append_value(record.read_name().unwrap());

@@ -10,5 +10,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 arrow = "37.0.0"
-noodles = { version = "0.35.0", features = ["bam", "bgzf", "sam"] }
+noodles = { version = "0.35.0", features = ["bam", "bgzf", "core", "sam"] }
 pyo3 = "0.18.1"

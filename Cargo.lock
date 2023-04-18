@@ -700,6 +700,7 @@ checksum = "2bc3e1a97106b94104db416d3886594b2f4d7c49cdf90603b68ea4d71833b2b5"
 dependencies = [
  "noodles-bam",
  "noodles-bgzf",
+ "noodles-core",
  "noodles-sam",
 ]
 
