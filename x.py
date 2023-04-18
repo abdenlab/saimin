@@ -9,9 +9,9 @@ import bram
 
 def main():
     with bram.BamReader(sys.argv[1]) as reader:
-        ipc = reader.fetch("chr1", 0, 100_000)
+        ipc = reader.fetch("chr2", 0, 1_000_000)
     df = polars.read_ipc(ipc)
-    print(df.head())
+    print(df)
 
 
 if __name__ == "__main__":
