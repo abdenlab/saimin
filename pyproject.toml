@@ -17,5 +17,15 @@ features = ["pyo3/extension-module"]
 
 [tool.hatch.envs.default]
 dependencies = [
-    "polars"
+    "pandas",
+    "polars",
+    "pyarrow",
+    "pysam",
+    "richbench",
 ]
+
+[tool.hatch.envs.default.scripts]
+bench = "hyperfine --warmup 3 './bench.py pysam' './bench.py saimin_polars' './bench.py saimin_pandas' './bench.py saimin_ipc'"
+
+[tool.ruff.isort]
+known-first-party = ["saimin"]
