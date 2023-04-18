@@ -4,11 +4,11 @@ import sys
 
 import polars
 
-import bram
+import saimin
 
 
 def main():
-    with bram.BamReader(sys.argv[1]) as reader:
+    with saimin.BamReader(sys.argv[1]) as reader:
         ipc = reader.fetch("chr2", 1, 1_000_000)
     df = polars.read_ipc(ipc)
     print(df)

@@ -1,4 +1,4 @@
-# bram
+# saimin 🍜
 
 proof of concept. read short read sequence data stored in sam/bam files as arrow ipc (without htslib).
 
@@ -6,9 +6,9 @@ proof of concept. read short read sequence data stored in sam/bam files as arrow
 
 ```python
 import polars
-import bram
+import saimin
 
-with bram.BamReader("example.bam") as reader:
+with saimin.BamReader("example.bam") as reader:
     ipc = reader.fetch("chr2", 0, 100_000)
 df = polars.read_ipc(ipc)
 df

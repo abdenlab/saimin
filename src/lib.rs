@@ -101,7 +101,7 @@ fn write_ipc(query: bam::reader::Query<std::fs::File>) -> Vec<u8> {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn bram(_py: Python, m: &PyModule) -> PyResult<()> {
+fn saimin(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<BamReader>()?;
     Ok(())
 }
