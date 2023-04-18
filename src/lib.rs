@@ -11,24 +11,31 @@ use arrow::datatypes::Int8Type;
 use arrow::ipc::writer::FileWriter;
 use arrow::record_batch::RecordBatch;
 
+use noodles::bam;
+use noodles::bgzf;
+use noodles::sam;
+
 #[pyclass]
 struct BamReader {
-    reader: bam::IndexedReader<std::fs::File>,
+    reader: bam::IndexedReader<bgzf::Reader<std::fs::File>>,
+    header: sam::Header,
 }
 
 #[pymethods]
 impl BamReader {
     #[new]
     fn py_new(path: &str) -> Self {
-        let reader = bam::IndexedReader::from_path(path).unwrap();
-        Self { reader }
+        let mut reader = bam::indexed_reader::Builder::default()
+            .build_from_path(path)
+            .unwrap();
+        let header = reader.read_header().unwrap();
+        Self { reader, header }
     }
 
     pub fn fetch(&mut self, chrom: &str, start: u32, end: u32) -> PyObject {
-        let header = self.reader.header().clone();
-        let ref_id = header.reference_id(chrom).expect("Invalid reference name.");
-        let region = bam::Region::new(ref_id, start, end);
-        let ipc = write_ipc(self.reader.fetch(&region).unwrap(), &header);
+        let region = format!("{}:{}-{}", chrom, start, end).parse().unwrap();
+        let query = self.reader.query(&self.header, &region).unwrap();
+        let ipc = write_ipc(query);
         Python::with_gil(|py| PyBytes::new(py, &ipc).into())
     }
 
@@ -40,10 +47,7 @@ impl BamReader {
     pub fn __exit__(&mut self, _exc_type: PyObject, _exc_value: PyObject, _traceback: PyObject) {}
 }
 
-fn write_ipc(
-    region_viewer: bam::bam_reader::RegionViewer<std::fs::File>,
-    header: &bam::Header,
-) -> Vec<u8> {
+fn write_ipc(query: bam::reader::Query<std::fs::File>) -> Vec<u8> {
     let mut refs = StringDictionaryBuilder::<Int8Type>::new();
 
     let size = 100; // TODO: get size from region_viewer?
@@ -56,16 +60,16 @@ fn write_ipc(
     let mut quals = GenericBinaryBuilder::<i32>::new();
 
     // Map row-wise entries to column-wise arrays
-    for record in region_viewer {
-        let record = record.unwrap();
-        refs.append(header.reference_name(record.ref_id() as u32).unwrap())
-            .unwrap();
-        starts.append_value(record.start());
-        ends.append_value(record.calculate_end());
-        names.append_value(record.name());
+    for result in query {
+        let record = result.unwrap();
+        // TODO: map reference id to name
+        refs.append("chr1").unwrap();
+        starts.append_value(record.alignment_start().unwrap().get() as i32);
+        ends.append_value(record.alignment_end().unwrap().get() as i32);
+        names.append_value(record.read_name().unwrap());
         cigars.append_value(record.cigar().to_string());
-        seqs.append_value(record.sequence().to_vec());
-        quals.append_value(record.qualities().raw());
+        seqs.append_value(record.sequence().to_string());
+        quals.append_value(record.quality_scores().to_string());
     }
 
     let names = GenericStringArray::try_from_binary(names.finish()).unwrap();
