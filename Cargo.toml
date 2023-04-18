@@ -1,0 +1,14 @@
+[package]
+name = "bram"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "bram"
+crate-type = ["cdylib"]
+
+[dependencies]
+arrow = "37.0.0"
+bam = "0.1.4"
+pyo3 = "0.18.1"
