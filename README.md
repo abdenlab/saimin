@@ -2,16 +2,17 @@
 
 proof of concept. read short read sequence data stored in sam/bam files as arrow ipc (without htslib).
 
-# usage
+## usage
 
 ```python
 import polars
 import saimin
 
-with saimin.BamReader("example.bam") as reader:
-    ipc = reader.fetch("chr2", 0, 100_000)
+with saimin.BamReader("./example.bam") as reader:
+    ipc = reader.fetch("chr2", 1, 1_000_000)
+
 df = polars.read_ipc(ipc)
-df
+print(df)
 
 # shape: (655, 7)
 # ┌──────┬────────┬────────┬───────────────────────────────────┬───────┬───────────────────────────────────┬───────────────────────────────────┐
@@ -31,7 +32,7 @@ df
 # └──────┴────────┴────────┴───────────────────────────────────┴───────┴───────────────────────────────────┴───────────────────────────────────┘
 ```
 
-# development
+## development
 
 this project uses `maturin` and `hatch` for development, which can be installed with `pipx`.
 
