@@ -43,6 +43,11 @@ hatch shell
 # compile a development version of the package
 maturin develop --release
 
+
+mkdir data
+wget https://aveit.s3.amazonaws.com/higlass/bam/example_higlass.bam -O data/example.bam
+wget https://aveit.s3.amazonaws.com/higlass/bam/example_higlass.bam.bai -O data/example.bam.bai
+
 # run the benchmark
 hatch run bench
 
