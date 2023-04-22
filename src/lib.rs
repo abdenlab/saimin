@@ -51,19 +51,6 @@ impl BamReader {
         Python::with_gil(|py| PyBytes::new(py, &ipc).into())
     }
 
-    pub fn fetch_noodles(&mut self, chrom: &str, start: usize, end: usize) -> () {
-        let start = Position::try_from(start + 1).unwrap();
-        let end = Position::try_from(end).unwrap();
-        let query = self
-            .reader
-            .query(&self.header, &Region::new(chrom, start..=end))
-            .unwrap();
-        for record in query {
-            let _record = record.unwrap();
-        }
-        print!("done");
-    }
-
     /// https://github.com/PyO3/pyo3/issues/1205#issuecomment-1164096251 for advice on `__enter__`
     pub fn __enter__(slf: Py<Self>) -> Py<Self> {
         slf
@@ -95,7 +82,7 @@ fn write_ipc(query: bam::reader::Query<BufferedReader>, header: &sam::Header) ->
     // Map row-wise entries to column-wise arrays
     for result in query {
         let record = result.unwrap();
-        match record.reference_sequence(&header) {
+        match record.reference_sequence(header) {
             Some(Ok((name, _))) => refs.append_value(name.as_str()),
             _ => panic!("no reference sequence"),
         };
