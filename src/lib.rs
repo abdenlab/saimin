@@ -5,7 +5,7 @@ use std::str;
 use std::sync::Arc;
 
 use arrow::array::{
-    ArrayRef, GenericBinaryBuilder, GenericStringArray, Int32Array, StringDictionaryBuilder,
+    ArrayRef, GenericBinaryBuilder, GenericStringArray, Int32Array, StringDictionaryBuilder, UInt8Array,
 };
 use arrow::datatypes::Int8Type;
 use arrow::ipc::writer::FileWriter;
@@ -77,7 +77,7 @@ fn write_ipc(query: bam::reader::Query<BufferedReader>, header: &sam::Header) ->
     let size = 100; // TODO: get size from region_viewer?
     let mut starts = Int32Array::builder(size);
     let mut ends = Int32Array::builder(size);
-    let mut mapqs = Int32Array::builder(size);
+    let mut mapqs = UInt8Array::builder(size);
     let mut names = GenericBinaryBuilder::<i32>::new();
     let mut cigars = GenericBinaryBuilder::<i32>::new();
     let mut seqs = GenericBinaryBuilder::<i32>::new();
@@ -94,7 +94,7 @@ fn write_ipc(query: bam::reader::Query<BufferedReader>, header: &sam::Header) ->
         refs.append(ref_name).unwrap();
         starts.append_value(record.alignment_start().unwrap().get() as i32);
         ends.append_value(record.alignment_end().unwrap().get() as i32);
-        mapqs.append_value(record.mapping_quality().unwrap().get() as i32);
+        mapqs.append_value(record.mapping_quality().unwrap().get());
         names.append_value(record.read_name().unwrap());
         cigars.append_value(record.cigar().to_string());
         seqs.append_value(record.sequence().to_string());
