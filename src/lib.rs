@@ -5,9 +5,10 @@ use std::str;
 use std::sync::Arc;
 
 use arrow::array::{
-    ArrayRef, GenericBinaryBuilder, GenericStringArray, Int32Array, StringDictionaryBuilder, UInt8Array,
+    ArrayRef, GenericBinaryBuilder, GenericStringArray, Int32Array, StringArray,
+    StringDictionaryBuilder, UInt8Array,
 };
-use arrow::datatypes::Int8Type;
+use arrow::datatypes::Int32Type;
 use arrow::ipc::writer::FileWriter;
 use arrow::record_batch::RecordBatch;
 
@@ -72,9 +73,17 @@ impl BamReader {
 }
 
 fn write_ipc(query: bam::reader::Query<BufferedReader>, header: &sam::Header) -> Vec<u8> {
-    let mut refs = StringDictionaryBuilder::<Int8Type>::new();
-
     let size = 100; // TODO: get size from region_viewer?
+
+    let categories = StringArray::from(
+        header
+            .reference_sequences()
+            .iter()
+            .map(|(rs, _)| Some(rs.as_str()))
+            .collect::<Vec<_>>(),
+    );
+    let mut refs =
+        StringDictionaryBuilder::<Int32Type>::new_with_dictionary(size, &categories).unwrap();
     let mut starts = Int32Array::builder(size);
     let mut ends = Int32Array::builder(size);
     let mut mapqs = UInt8Array::builder(size);
@@ -86,12 +95,10 @@ fn write_ipc(query: bam::reader::Query<BufferedReader>, header: &sam::Header) ->
     // Map row-wise entries to column-wise arrays
     for result in query {
         let record = result.unwrap();
-        let ref_name = match record.reference_sequence(&header) {
-            Some(Ok((name, _))) => name,
-            None => "unknown",
-            _ => panic!("error getting reference sequence"),
+        match record.reference_sequence(&header) {
+            Some(Ok((name, _))) => refs.append_value(name.as_str()),
+            _ => panic!("no reference sequence"),
         };
-        refs.append(ref_name).unwrap();
         starts.append_value(record.alignment_start().unwrap().get() as i32);
         ends.append_value(record.alignment_end().unwrap().get() as i32);
         mapqs.append_value(record.mapping_quality().unwrap().get());
@@ -116,8 +123,8 @@ fn write_ipc(query: bam::reader::Query<BufferedReader>, header: &sam::Header) ->
         ("cigar", Arc::new(cigars) as ArrayRef),
         ("seq", Arc::new(seqs) as ArrayRef),
         ("qual", Arc::new(quals) as ArrayRef),
-    ])
-    .unwrap();
+    ]);
+    let batch = batch.unwrap();
 
     let mut ipc = Vec::new();
     {

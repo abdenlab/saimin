@@ -72,7 +72,7 @@ def saimin_polars(file: pathlib.Path, chr: str, start: int, stop: int):
 
 def main():
     file = pathlib.Path(__file__).parent / "data" / "example.bam"
-    region = ("chr2", 1, 27_000_000)
+    region = ("chr1", 1, 27_000_000)
 
     cmd = {
         "pysam": pysam_run,
